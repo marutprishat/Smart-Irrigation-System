@@ -16,19 +16,13 @@ interface SensorData {
   timestamp: string;
 }
 
+
 interface MetricCardData {
   value: number;
   label: string;
   color: 'blue' | 'yellow' | 'green';
   unit: string;
   max: number;
-}
-
-interface HistoricalData {
-  temperature: number[];
-  humidity: number[];
-  soil_moisture: number[];
-  timestamps: string[];
 }
 
 const CircularGauge = ({ value, max, label, color, unit }: MetricCardData) => {
@@ -94,12 +88,7 @@ const CircularGauge = ({ value, max, label, color, unit }: MetricCardData) => {
 
 export default function Dashboard() {
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
-  const [historicalData, setHistoricalData] = useState<HistoricalData>({
-    temperature: [],
-    humidity: [],
-    soil_moisture: [],
-    timestamps: []
-  });
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,35 +105,14 @@ export default function Dashboard() {
     }
   };
 
-  const fetchHistoricalData = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/sensor-data/esp8266-01/history?hours=24');
-      if (!response.ok) throw new Error('Failed to fetch historical data');
-      const data = await response.json();
-      
-      // Process historical data for charts
-      setHistoricalData({
-        temperature: data.map((d: SensorData) => d.temperature),
-        humidity: data.map((d: SensorData) => d.humidity),
-        soil_moisture: data.map((d: SensorData) => d.soil_moisture),
-        timestamps: data.map((d: SensorData) => new Date(d.timestamp).toLocaleTimeString())
-      });
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch historical data');
-      console.error('Error fetching historical data:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   useEffect(() => {
     fetchSensorData();
-    fetchHistoricalData();
+    
     
     const interval = setInterval(() => {
       fetchSensorData();
-      fetchHistoricalData();
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
@@ -156,12 +124,6 @@ export default function Dashboard() {
     { value: sensorData.soil_moisture, label: 'Soil Moisture', color: 'green' as const, unit: '%', max: 100 }
   ] : [];
 
-  const chartData = historicalData.timestamps.map((time, index) => ({
-    time,
-    temperature: historicalData.temperature[index],
-    humidity: historicalData.humidity[index],
-    soil_moisture: historicalData.soil_moisture[index]
-  }));
 
   if (error) {
     return (
@@ -185,46 +147,9 @@ export default function Dashboard() {
             </Title>
             <Text className="text-gray-600 text-lg">Real-time sensor data from your farm</Text>
           </div>
-          <div className="flex items-center gap-4">
-            <Button
-              size="lg"
-              variant="secondary"
-              icon={ArrowPathIcon}
-              className="shadow-sm hover:shadow-md transition-all duration-300 bg-white hover:bg-gray-50"
-              onClick={() => {
-                fetchSensorData();
-                fetchHistoricalData();
-              }}
-            >
-              Refresh
-            </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              icon={BellIcon}
-              className="shadow-sm hover:shadow-md transition-all duration-300 bg-white hover:bg-gray-50"
-            >
-              Notifications
-            </Button>
-          </div>
         </div>
 
-        {/* Time Range Selector */}
-        <div className="mb-8">
-          <TabGroup>
-            <TabList variant="solid" className="bg-white/50 backdrop-blur-sm shadow-sm rounded-xl p-1.5 border border-gray-100/50">
-              <Tab className="px-8 py-3.5 text-sm font-medium rounded-lg transition-all duration-300 hover:bg-white hover:shadow-sm data-[selected=true]:shadow-md">Latest</Tab>
-              <Tab className="px-8 py-3.5 text-sm font-medium rounded-lg transition-all duration-300 hover:bg-white hover:shadow-sm data-[selected=true]:shadow-md">1 Day</Tab>
-              <Tab className="px-8 py-3.5 text-sm font-medium rounded-lg transition-all duration-300 hover:bg-white hover:shadow-sm data-[selected=true]:shadow-md">1 Week</Tab>
-              <Tab className="px-8 py-3.5 text-sm font-medium rounded-lg transition-all duration-300 hover:bg-white hover:shadow-sm data-[selected=true]:shadow-md">1 Month</Tab>
-              <Tab className="px-8 py-3.5 text-sm font-medium rounded-lg transition-all duration-300 hover:bg-white hover:shadow-sm data-[selected=true]:shadow-md">3 Months</Tab>
-              <Tab className="px-8 py-3.5 text-sm font-medium rounded-lg flex items-center gap-2 transition-all duration-300 hover:bg-white hover:shadow-sm data-[selected=true]:shadow-md">
-                <CalendarIcon className="h-4 w-4" />
-                Custom Range
-              </Tab>
-            </TabList>
-          </TabGroup>
-        </div>
+
 
         {/* Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
@@ -240,88 +165,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <Card className="p-8 hover:shadow-lg transition-all duration-500 border border-gray-100/50 backdrop-blur-sm bg-white/50">
-            <Title className="mb-8 text-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
-              Temperature Trends
-            </Title>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
-                  <XAxis dataKey="time" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                      border: 'none',
-                      borderRadius: '0.75rem',
-                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-                      padding: '16px',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="temperature"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    fill="url(#temperatureGradient)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card className="p-8 hover:shadow-lg transition-all duration-500 border border-gray-100/50 backdrop-blur-sm bg-white/50">
-            <Title className="mb-8 text-xl font-semibold bg-gradient-to-r from-amber-500 to-amber-400 bg-clip-text text-transparent">
-              Humidity Trends
-            </Title>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="humidityGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#eab308" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
-                  <XAxis dataKey="time" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                      border: 'none',
-                      borderRadius: '0.75rem',
-                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-                      padding: '16px',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="humidity"
-                    stroke="#eab308"
-                    strokeWidth={3}
-                    fill="url(#humidityGradient)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
       </div>
     </div>
   );
