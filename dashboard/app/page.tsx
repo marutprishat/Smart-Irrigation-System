@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Types
 interface SensorData {
@@ -240,23 +242,10 @@ const DeviceManagement = () => {
 };
 
 export default function Dashboard() {
-  const [sensorData, setSensorData] = useState<SensorData | null>(null);
+  const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchSensorData = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/sensor-data/esp8266-01');
-      if (!response.ok) throw new Error('Failed to fetch sensor data');
-      const data = await response.json();
-      setSensorData(data);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch sensor data');
-      console.error('Error fetching sensor data:', err);
-    }
-  };
 
   useEffect(() => {
     fetchSensorData();
@@ -267,11 +256,27 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const sensorCards = sensorData ? [
-    { value: sensorData.temperature, label: 'Temperature', color: 'blue' as const, unit: '°C', max: 50 },
-    { value: sensorData.humidity, label: 'Humidity', color: 'yellow' as const, unit: '%', max: 100 },
-    { value: sensorData.soil_moisture, label: 'Soil Moisture', color: 'green' as const, unit: '%', max: 100 }
-  ] : [];
+  const fetchSensorData = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/sensor-data');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setSensorData([data]); // Wrap in array since we're expecting an array of data
+    } catch (error) {
+      console.error('Error fetching sensor data:', error);
+      toast.error(`Failed to fetch sensor data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const sensorCards = sensorData.map((data) => ({
+    value: data.temperature,
+    label: 'Temperature',
+    color: 'blue' as const,
+    unit: '°C',
+    max: 50
+  }));
 
   if (error) {
     return (
@@ -298,30 +303,69 @@ export default function Dashboard() {
         </div>
 
         {/* Tabs */}
-        <TabGroup className="mb-8">
-          <TabList>
-            <Tab onClick={() => setActiveTab('dashboard')}>Dashboard</Tab>
-            <Tab onClick={() => setActiveTab('devices')}>Device Management</Tab>
-          </TabList>
-        </TabGroup>
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="devices">Device Management</TabsTrigger>
+          </TabsList>
 
-        {activeTab === 'dashboard' ? (
-          /* Metrics */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            {sensorCards.map((sensor) => (
-              <Card
-                key={sensor.label}
-                className="p-8 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-1 border border-gray-100/50 backdrop-blur-sm bg-white/50"
-                decoration="top"
-                decorationColor={sensor.color}
-              >
-                <CircularGauge {...sensor} />
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <DeviceManagement />
-        )}
+          <TabsContent value="dashboard">
+            <div className="row g-4">
+              <div className="col-md-6 col-lg-3">
+                <Card className="h-100">
+                  <CardHeader>
+                    <CardTitle>Temperature</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">
+                      {sensorData[0]?.temperature || "N/A"}°C
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-md-6 col-lg-3">
+                <Card className="h-100">
+                  <CardHeader>
+                    <CardTitle>Humidity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">
+                      {sensorData[0]?.humidity || "N/A"}%
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-md-6 col-lg-3">
+                <Card className="h-100">
+                  <CardHeader>
+                    <CardTitle>Soil Moisture</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">
+                      {sensorData[0]?.soil_moisture || "N/A"}%
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-md-6 col-lg-3">
+                <Card className="h-100">
+                  <CardHeader>
+                    <CardTitle>Battery Level</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">
+                      {sensorData[0]?.battery_level || "N/A"}%
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="devices">
+            <DeviceManagement />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

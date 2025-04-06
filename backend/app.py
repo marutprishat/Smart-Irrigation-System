@@ -289,5 +289,37 @@ def get_devices():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/sensor-data', methods=['GET'])
+def get_default_sensor_data():
+    """Endpoint to get data for a default device (for testing)"""
+    try:
+        conn = sqlite3.connect('sensor_data.db')
+        c = conn.cursor()
+        
+        # Get the latest reading for any device
+        c.execute('''
+            SELECT temperature, humidity, soil_moisture, battery_level, timestamp
+            FROM sensor_readings
+            ORDER BY timestamp DESC
+            LIMIT 1
+        ''')
+        
+        row = c.fetchone()
+        conn.close()
+        
+        if row:
+            return jsonify({
+                "temperature": row[0],
+                "humidity": row[1],
+                "soil_moisture": row[2],
+                "battery_level": row[3],
+                "timestamp": row[4]
+            }), 200
+        else:
+            return jsonify({"error": "No data found"}), 404
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000) 
