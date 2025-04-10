@@ -1,12 +1,16 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
 import sqlite3
 import os
 import kubernetes.client
 from kubernetes import client, config
 import logging
 from flask_socketio import SocketIO, emit
+import requests
+from dotenv import load_dotenv
+import math
+import random
 
 app = Flask(__name__)
 CORS(app)
@@ -69,6 +73,22 @@ def init_db():
 
 # Initialize database on startup
 init_db()
+
+# Load environment variables
+load_dotenv()
+
+# OpenWeatherMap API configuration
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
+OPENWEATHER_BASE_URL = "https://api.openweathermap.org"
+
+# WeatherAPI configuration
+WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
+WEATHER_API_BASE_URL = "https://api.weatherapi.com/v1"
+
+# Weather API configuration
+RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY')
+RAPIDAPI_HOST = "imd-weather.p.rapidapi.com"
+RAPIDAPI_BASE_URL = f"https://{RAPIDAPI_HOST}"
 
 @app.route('/api/sensor-data', methods=['POST'])
 def receive_sensor_data():
@@ -326,6 +346,53 @@ def get_default_sensor_data():
             return jsonify({"error": "No data found"}), 404
             
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/weather', methods=['GET'])
+def get_weather():
+    try:
+        # Mock weather data for Bhopal
+        current_time = datetime.now()
+        
+        # Generate mock data based on time of day
+        hour = current_time.hour
+        base_temp = 25  # Base temperature
+        temp_variation = 5 * math.sin(hour * math.pi / 12)  # Temperature varies throughout the day
+        
+        weather_data = {
+            "temperature": round(base_temp + temp_variation, 1),
+            "humidity": 65 + random.randint(-10, 10),
+            "precipitation": random.randint(0, 5),
+            "windSpeed": random.randint(5, 15),
+            "forecast": []
+        }
+        
+        # Generate 3-day forecast
+        for i in range(3):
+            day = (current_time + timedelta(days=i)).strftime('%a')
+            min_temp = base_temp + random.randint(-3, 3)
+            max_temp = min_temp + random.randint(3, 7)
+            
+            conditions = ["Sunny", "Partly Cloudy", "Cloudy", "Light Rain", "Thunderstorm"]
+            condition = random.choice(conditions)
+            
+            forecast_item = {
+                "day": day,
+                "temperature": {
+                    "min": min_temp,
+                    "max": max_temp
+                },
+                "condition": condition,
+                "icon": condition.lower().replace(" ", "_")
+            }
+            weather_data['forecast'].append(forecast_item)
+        
+        logger.info("Successfully generated mock weather data")
+        return jsonify(weather_data), 200
+        
+    except Exception as e:
+        logger.error(f"Error generating mock weather data: {str(e)}")
+        logger.error(f"Full error details: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @socketio.on('connect')
