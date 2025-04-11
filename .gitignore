@@ -1,0 +1,62 @@
+# Node modules
+/node_modules/
+
+# Build output
+/dist/
+/build/
+/.vite/
+
+# Environment variables
+.env
+.env.*.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Vite cache
+/.vite-cache/
+/vite.config.ts.tmp
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# MacOS/Linux files
+*.swp
+*~
+*.bak
+*.tmp
+
+# Windows files
+ehthumbs.db
+Desktop.ini
+
+# Coverage and testing
+coverage/
+*.lcov
+
+# Typescript
+*.tsbuildinfo
+
+# Optional: ignore local dev database, if any
+*.sqlite
+*.db
+
+# Optional: ignore lockfiles if you're not using them in version control
+# Uncomment the one you're NOT using
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+# bun.lockb
