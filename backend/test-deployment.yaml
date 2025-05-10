@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-device
+  namespace: farm-iot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-device
+  template:
+    metadata:
+      labels:
+        app: test-device
+    spec:
+      containers:
+      - name: test-device
+        image: busybox
+        command: ["sh", "-c", "while true; do echo 'Test device running'; sleep 30; done"]
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-device
+  namespace: farm-iot
+spec:
+  selector:
+    app: test-device
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP 
